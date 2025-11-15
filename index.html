@@ -32,6 +32,12 @@
   <link rel="stylesheet" href="./static/css/index.css">
   <link rel="icon" href="./static/images/favicon.svg">
 
+  <!-- Prism.js for syntax highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  
+  <!-- Diff2Html for code comparison -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
+
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script defer src="./static/js/fontawesome.all.min.js"></script>
   <script src="./static/js/bulma-carousel.min.js"></script>
@@ -596,6 +602,33 @@
           </div>
         </div>
       </div>
+      <div class="container" style="margin-bottom:3rem;">
+        <h2 class="title is-3 has-text-centered">Evolution of the guidance code</h2>
+        
+        <div class="guidance-carousel-container">
+          <div class="guidance-carousel-wrapper" id="guidanceCarouselWrapper">
+            <!-- Slides will be dynamically loaded -->
+          </div>
+        </div>
+
+        <div class="guidance-carousel-controls">
+          <button class="guidance-carousel-button" id="guidancePrevBtn" onclick="changeGuidanceSlide(-1)">
+            <span>←</span>
+            <span>Previous</span>
+          </button>
+          
+          <div class="guidance-carousel-indicators" id="guidanceIndicators">
+            <!-- Indicators will be dynamically added -->
+          </div>
+          
+          <span class="guidance-slide-info" id="guidanceSlideInfo">Loading...</span>
+          
+          <button class="guidance-carousel-button" id="guidanceNextBtn" onclick="changeGuidanceSlide(1)">
+            <span>Next</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -991,6 +1024,322 @@
       </div>
     </div>
   </footer>
+
+  <!-- Prism.js for syntax highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+  <!-- Diff2Html for code comparison -->
+  <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+
+  <!-- Guidance Carousel Script -->
+  <script>
+    (function() {
+      let currentGuidanceSlide = 0;
+      let totalGuidanceSlides = 0;
+      let fileContents = []; // Store file contents for diff generation
+      let viewModes = []; // Track view mode for each slide (code or diff)
+
+      // Configuration: files to load
+      const guidanceFiles = [
+        { 
+          file: 'static/logs/guidance_code_0.py', 
+          iteration: 0,
+          task: 'Press the maroon button, then press the green button',
+          keyDifferences: 'Initial implementation with basic distance-based scoring and fixed pressing distance threshold (0.1m).',
+          success: false
+        },
+        { 
+          file: 'static/logs/guidance_code_5.py', 
+          iteration: 5,
+          task: 'Press the maroon button, then press the green button',
+          keyDifferences: 'Added dynamic pressing distance based on button size, orientation tracking, penalty for moving away from targets, and button press confirmation logic.',
+          success: false
+        },
+        { 
+          file: 'static/logs/guidance_code_10.py', 
+          iteration: 10,
+          task: 'Press the maroon button, then press the green button',
+          keyDifferences: 'Improved sensor feedback for button press confirmation with tighter tolerance (0.05m), refined scoring logic with additive approach, and defined placeholders for possible path planning integration.',
+          success: true
+        }
+      ];
+
+      // Function to escape HTML
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Function to generate unified diff format with full context
+      function generateUnifiedDiff(oldText, newText, oldFile, newFile) {
+        const oldLines = oldText.split('\n');
+        const newLines = newText.split('\n');
+        
+        let diff = `--- ${oldFile}\n+++ ${newFile}\n`;
+        diff += `@@ -1,${oldLines.length} +1,${newLines.length} @@\n`;
+        
+        // Show all lines with full context
+        const maxLines = Math.max(oldLines.length, newLines.length);
+        for (let i = 0; i < maxLines; i++) {
+          const oldLine = oldLines[i] !== undefined ? oldLines[i] : '';
+          const newLine = newLines[i] !== undefined ? newLines[i] : '';
+          
+          if (oldLine === newLine) {
+            // Unchanged line - show in both sides
+            diff += ` ${oldLine}\n`;
+          } else {
+            // Changed, added, or removed line
+            if (oldLine !== '') diff += `-${oldLine}\n`;
+            if (newLine !== '') diff += `+${newLine}\n`;
+          }
+        }
+        
+        return diff;
+      }
+
+      // Function to toggle between code and diff view
+      function toggleView(slideIndex) {
+        const slide = document.querySelectorAll('.guidance-carousel-item')[slideIndex];
+        if (!slide) return;
+        
+        const codeContent = slide.querySelector('.guidance-code-content');
+        const diffContent = slide.querySelector('.guidance-diff-content');
+        const toggleBtn = slide.querySelector('.guidance-view-toggle');
+        
+        if (!codeContent || !diffContent || !toggleBtn) return;
+        
+        viewModes[slideIndex] = viewModes[slideIndex] === 'diff' ? 'code' : 'diff';
+        
+        if (viewModes[slideIndex] === 'diff') {
+          codeContent.classList.add('hidden');
+          diffContent.classList.add('active');
+          toggleBtn.classList.add('active');
+          toggleBtn.innerHTML = '<span>📄</span><span>Show Code</span>';
+        } else {
+          codeContent.classList.remove('hidden');
+          diffContent.classList.remove('active');
+          toggleBtn.classList.remove('active');
+          toggleBtn.innerHTML = '<span>🔄</span><span>Show Diff</span>';
+        }
+      }
+
+      // Function to create a slide
+      function createSlide(content, filename, iteration, index, task, keyDifferences, success) {
+        const prevIndex = index - 1;
+        const hasPrevious = prevIndex >= 0;
+        const diffDisabled = !hasPrevious ? 'disabled' : '';
+        const diffInfo = hasPrevious 
+          ? `vs Iteration ${guidanceFiles[prevIndex].iteration}` 
+          : 'No previous version';
+        
+        const successIcon = success 
+          ? `<div class="guidance-status-indicator">
+               <div class="guidance-status-label success">Succeed</div>
+               <img src="static/images/icons/green.png" alt="Success" class="guidance-status-icon" />
+             </div>` 
+          : `<div class="guidance-status-indicator">
+               <div class="guidance-status-label failed">Failed</div>
+               <img src="static/images/icons/red.png" alt="Failed" class="guidance-status-icon" />
+             </div>`;
+        
+        return `
+          <div class="guidance-carousel-item" data-slide-index="${index}">
+            <div class="guidance-code-card">
+              <div class="guidance-code-header">
+                <div class="guidance-header-top">
+                  <span class="guidance-code-title">${task}</span>
+                  <span class="guidance-iteration-badge">Iteration ${iteration}</span>
+                </div>
+                <div class="guidance-header-controls">
+                  <button class="guidance-view-toggle" ${diffDisabled} onclick="toggleView(${index})" title="${diffInfo}">
+                    <span>🔄</span>
+                    <span>Show Diff</span>
+                  </button>
+                </div>
+              </div>
+              <div class="guidance-code-content">
+                <pre><code class="language-python">${escapeHtml(content)}</code></pre>
+              </div>
+              <div class="guidance-diff-content" id="diff-${index}">
+                <!-- Diff will be rendered here -->
+              </div>
+              <div class="guidance-key-differences">
+                <div class="guidance-key-differences-content">
+                  <strong>Key Changes:</strong> ${keyDifferences}
+                </div>
+                ${successIcon}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Function to load all files
+      async function loadGuidanceFiles() {
+        const wrapper = document.getElementById('guidanceCarouselWrapper');
+        const indicatorsContainer = document.getElementById('guidanceIndicators');
+        
+        if (!wrapper) return;
+
+        try {
+          // Load all file contents
+          const loadPromises = guidanceFiles.map(async (fileInfo) => {
+            const response = await fetch(fileInfo.file);
+            if (!response.ok) throw new Error(`Failed to load ${fileInfo.file}`);
+            return await response.text();
+          });
+
+          fileContents = await Promise.all(loadPromises);
+          
+          // Create slides
+          const slides = guidanceFiles.map((fileInfo, index) => {
+            const filename = fileInfo.file.split('/').pop();
+            viewModes[index] = 'code'; // Initialize view mode
+            return createSlide(
+              fileContents[index], 
+              filename, 
+              fileInfo.iteration, 
+              index, 
+              fileInfo.task,
+              fileInfo.keyDifferences,
+              fileInfo.success
+            );
+          });
+          
+          wrapper.innerHTML = slides.join('');
+          totalGuidanceSlides = slides.length;
+
+          // Create indicators
+          indicatorsContainer.innerHTML = guidanceFiles.map((_, index) => 
+            `<div class="guidance-indicator ${index === 0 ? 'active' : ''}" onclick="goToGuidanceSlide(${index})"></div>`
+          ).join('');
+
+          // Generate diffs for each slide (except the first one)
+          for (let i = 1; i < fileContents.length; i++) {
+            generateDiffView(i);
+          }
+
+          // Highlight code with Prism
+          Prism.highlightAll();
+          
+          // Initialize carousel
+          updateGuidanceCarousel();
+        } catch (error) {
+          console.error('Error loading guidance files:', error);
+          wrapper.innerHTML = `
+            <div class="guidance-carousel-item">
+              <div class="guidance-code-card">
+                <div class="guidance-code-header">
+                  <div class="guidance-header-top">
+                    <span class="guidance-code-title">Error Loading Files</span>
+                  </div>
+                </div>
+                <div class="guidance-code-content" style="padding: 20px;">
+                  <p style="color: #ff3860;">Failed to load guidance code files. Please check the console for details.</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Function to generate diff view
+      function generateDiffView(currentIndex) {
+        if (currentIndex === 0) return; // No diff for first slide
+        
+        const prevIndex = currentIndex - 1;
+        const oldContent = fileContents[prevIndex];
+        const newContent = fileContents[currentIndex];
+        
+        const oldFilename = guidanceFiles[prevIndex].file.split('/').pop();
+        const newFilename = guidanceFiles[currentIndex].file.split('/').pop();
+        
+        const diffString = generateUnifiedDiff(oldContent, newContent, oldFilename, newFilename);
+        
+        const diffContainer = document.getElementById(`diff-${currentIndex}`);
+        if (diffContainer) {
+          const configuration = {
+            drawFileList: false,
+            fileListToggle: false,
+            fileListStartVisible: false,
+            fileContentToggle: false,
+            matching: 'lines',
+            outputFormat: 'side-by-side',
+            renderNothingWhenEmpty: false,
+            diffMaxChanges: undefined,
+            diffMaxLineLength: undefined,
+            diffStyle: 'word',
+          };
+          
+          const diff2htmlUi = new Diff2HtmlUI(diffContainer, diffString, configuration);
+          diff2htmlUi.draw();
+        }
+      }
+
+      // Make toggleView available globally
+      window.toggleView = toggleView;
+
+      function updateGuidanceCarousel() {
+        const wrapper = document.getElementById('guidanceCarouselWrapper');
+        const indicators = document.querySelectorAll('.guidance-indicator');
+        const prevBtn = document.getElementById('guidancePrevBtn');
+        const nextBtn = document.getElementById('guidanceNextBtn');
+        const slideInfo = document.getElementById('guidanceSlideInfo');
+
+        if (!wrapper || totalGuidanceSlides === 0) return;
+
+        // Update slide position
+        wrapper.style.transform = `translateX(-${currentGuidanceSlide * 100}%)`;
+
+        // Update indicators
+        indicators.forEach((indicator, index) => {
+          indicator.classList.toggle('active', index === currentGuidanceSlide);
+        });
+
+        // Update button states
+        if (prevBtn) prevBtn.disabled = currentGuidanceSlide === 0;
+        if (nextBtn) nextBtn.disabled = currentGuidanceSlide === totalGuidanceSlides - 1;
+
+        // Update slide info
+        if (slideInfo) slideInfo.textContent = `${currentGuidanceSlide + 1} / ${totalGuidanceSlides}`;
+      }
+
+      window.changeGuidanceSlide = function(direction) {
+        currentGuidanceSlide += direction;
+        if (currentGuidanceSlide < 0) currentGuidanceSlide = 0;
+        if (currentGuidanceSlide >= totalGuidanceSlides) currentGuidanceSlide = totalGuidanceSlides - 1;
+        updateGuidanceCarousel();
+      };
+
+      window.goToGuidanceSlide = function(index) {
+        currentGuidanceSlide = index;
+        updateGuidanceCarousel();
+      };
+
+      // Keyboard navigation (only when carousel is in view)
+      document.addEventListener('keydown', function(e) {
+        const carousel = document.getElementById('guidanceCarouselWrapper');
+        if (!carousel) return;
+        
+        const rect = carousel.getBoundingClientRect();
+        const isInView = rect.top < window.innerHeight && rect.bottom >= 0;
+        
+        if (isInView) {
+          if (e.key === 'ArrowLeft') changeGuidanceSlide(-1);
+          if (e.key === 'ArrowRight') changeGuidanceSlide(1);
+        }
+      });
+
+      // Initialize: load files when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadGuidanceFiles);
+      } else {
+        loadGuidanceFiles();
+      }
+    })();
+  </script>
 
 </body>
 
