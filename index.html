@@ -33,7 +33,7 @@
   <link rel="icon" href="./static/images/favicon.svg">
 
   <!-- Prism.js for syntax highlighting -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
   
   <!-- Diff2Html for code comparison -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
@@ -42,6 +42,10 @@
   <script defer src="./static/js/fontawesome.all.min.js"></script>
   <script src="./static/js/bulma-carousel.min.js"></script>
   <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
   <script src="./static/js/index.js"></script>
 </head>
 
@@ -629,6 +633,7 @@
           </button>
         </div>
       </div>
+
     </div>
   </section>
 
@@ -898,6 +903,37 @@
       </div>
     </div>
 
+      <!-- Agent Conversation Logs Section -->
+      <div class="container" style="margin-top:4rem; margin-bottom:3rem;">
+        <h2 class="title is-3 has-text-centered">Agent Conversation Logs Examples</h2>
+        <p class="has-text-centered" style="margin-bottom: 2rem;">
+          Explore the conversation between agents as they collaborate to generate guidance code
+        </p>
+        
+        <div class="conversation-carousel-container">
+          <div class="conversation-carousel-wrapper" id="conversationCarouselWrapper">
+            <!-- Conversation slides will be dynamically loaded -->
+          </div>
+        </div>
+
+        <div class="conversation-carousel-controls">
+          <button class="conversation-carousel-button" id="conversationPrevBtn" onclick="changeConversationSlide(-1)">
+            <span>←</span>
+            <span>Previous</span>
+          </button>
+          
+          <div class="conversation-carousel-indicators" id="conversationIndicators">
+            <!-- Indicators will be dynamically added -->
+          </div>
+          
+          <span class="conversation-slide-info" id="conversationSlideInfo">Loading...</span>
+          
+          <button class="conversation-carousel-button" id="conversationNextBtn" onclick="changeConversationSlide(1)">
+            <span>Next</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1337,6 +1373,235 @@
         document.addEventListener('DOMContentLoaded', loadGuidanceFiles);
       } else {
         loadGuidanceFiles();
+      }
+    })();
+  </script>
+
+  <!-- Conversation Carousel Script -->
+  <script>
+    (function() {
+      let currentConversationSlide = 0;
+      let totalConversationSlides = 0;
+      let conversationLogs = [];
+
+      // Configuration: conversation log files to load
+      const conversationFiles = [
+        'static/logs/conversation_logs/conversation_log.json',
+        // 'static/logs/conversation_logs/conversation_log_2.json'
+
+      ];
+
+      // Map role/agent names to display types
+      function getAgentType(role, agent) {
+        if (agent) {
+          if (agent.includes('supervisor')) return 'advisor';
+          if (agent.includes('perception')) return 'grounding';
+          if (agent.includes('robotic')) return 'robotic';
+          if (agent.includes('user')) return 'monitor';
+          if (agent.includes('proxy')) return 'monitor';
+        }
+        if (role === 'user') return 'monitor';
+        if (role === 'assistant') return 'advisor';
+        if (role === 'tool') return 'monitor';
+        return 'monitor';
+      }
+      
+      // Get display name from agent/role
+      function getDisplayName(role, agent) {
+        if (role === 'tool') {
+          return 'Tool Calling';
+        }
+        if (agent) {
+          return agent.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        return role.charAt(0).toUpperCase() + role.slice(1);
+      }
+
+      function createConversationSlide(conversationData, index) {
+        // Extract first message content for subtitle
+        const firstMessage = conversationData.messages.find(msg => msg.content && msg.content.trim() !== '');
+        const firstMessageContent = firstMessage ? firstMessage.content.substring(0, 150).replace(/\n/g, ' ') : 'No messages';
+        
+        const title = 'Agent Conversation Log';
+        const subtitle = firstMessageContent + (firstMessageContent.length >= 150 ? '...' : '');
+        
+        const messagesHtml = conversationData.messages
+          .filter(msg => msg.content && msg.content.trim() !== '') // Skip empty messages
+          .map((msg, msgIndex) => {
+            const agentType = getAgentType(msg.role, msg.name || msg.agent);
+            const displayName = getDisplayName(msg.role, msg.name || msg.agent);
+            
+            // Format content - detect and display base64 images
+            let content = msg.content;
+            
+            // Detect base64 image data
+            const base64ImageRegex = /<img\s+data:image\/([^;]+);base64,([^>]+)>/g;
+            const hasImages = base64ImageRegex.test(content);
+            
+            if (hasImages) {
+              // Replace base64 image placeholders with actual img tags
+              content = content.replace(
+                /<img\s+data:image\/([^;]+);base64,([^>]+)>/g,
+                '<img src="data:image/$1;base64,$2" style="max-width: 100%; max-height: 200px; height: auto; border-radius: 4px; margin: 10px 0; object-fit: contain;" />'
+              );
+            }
+            
+            // Preserve line breaks and code blocks
+            content = content
+              .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+              .replace(/\n/g, '<br>');
+            
+            return `
+              <div class="message ${agentType}">
+                <div class="message-header">
+                  <div class="agent-avatar ${agentType}">${displayName.charAt(0)}</div>
+                  <span class="agent-name">${displayName}</span>
+                  <span class="message-timestamp">Message ${msgIndex + 1}</span>
+                </div>
+                <div class="message-content">${content}</div>
+              </div>
+            `;
+          }).join('');
+
+        const totalMessages = conversationData.total_messages || conversationData.messages.length;
+        const cost = conversationData.total_cost ? `$${conversationData.total_cost.toFixed(4)}` : 'N/A';
+
+        return `
+          <div class="conversation-carousel-item" data-slide-index="${index}">
+            <div class="conversation-card">
+              <div class="conversation-header">
+                <div class="conversation-title">${title}</div>
+                <div class="conversation-subtitle">${subtitle}</div>
+              </div>
+              <div class="conversation-messages">
+                ${messagesHtml}
+              </div>
+              <div class="conversation-footer">
+                <div class="conversation-stats">
+                  <div class="stat-item">
+                    <span class="stat-icon">💬</span>
+                    <span class="stat-value">${totalMessages}</span>
+                    <span>messages</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-icon">💰</span>
+                    <span class="stat-value">${cost}</span>
+                    <span>cost</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      async function loadConversationLogs() {
+        const wrapper = document.getElementById('conversationCarouselWrapper');
+        const indicatorsContainer = document.getElementById('conversationIndicators');
+        
+        if (!wrapper) return;
+
+        try {
+          // Load all conversation log files
+          const loadPromises = conversationFiles.map(async (file) => {
+            const response = await fetch(file);
+            if (!response.ok) throw new Error(`Failed to load ${file}`);
+            return await response.json();
+          });
+
+          conversationLogs = await Promise.all(loadPromises);
+          
+          // Create slides
+          const slides = conversationLogs.map((data, index) => createConversationSlide(data, index));
+          wrapper.innerHTML = slides.join('');
+          totalConversationSlides = slides.length;
+
+          // Create indicators
+          indicatorsContainer.innerHTML = conversationLogs.map((_, index) => 
+            `<div class="conversation-indicator ${index === 0 ? 'active' : ''}" onclick="goToConversationSlide(${index})"></div>`
+          ).join('');
+
+          // Initialize carousel
+          updateConversationCarousel();
+          
+          // Apply syntax highlighting to code blocks
+          if (typeof Prism !== 'undefined') {
+            Prism.highlightAll();
+          }
+        } catch (error) {
+          console.error('Error loading conversation logs:', error);
+          wrapper.innerHTML = `
+            <div class="conversation-carousel-item">
+              <div class="conversation-card">
+                <div class="conversation-header">
+                  <div class="conversation-title">Error Loading Conversations</div>
+                  <div class="conversation-subtitle">Failed to load conversation log files</div>
+                </div>
+                <div class="conversation-messages" style="padding: 20px;">
+                  <p style="color: #ff3860;">Failed to load conversation log files. Please check the console for details.</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      function updateConversationCarousel() {
+        const wrapper = document.getElementById('conversationCarouselWrapper');
+        const indicators = document.querySelectorAll('.conversation-indicator');
+        const prevBtn = document.getElementById('conversationPrevBtn');
+        const nextBtn = document.getElementById('conversationNextBtn');
+        const slideInfo = document.getElementById('conversationSlideInfo');
+
+        if (!wrapper || totalConversationSlides === 0) return;
+
+        // Update slide position
+        wrapper.style.transform = `translateX(-${currentConversationSlide * 100}%)`;
+
+        // Update indicators
+        indicators.forEach((indicator, index) => {
+          indicator.classList.toggle('active', index === currentConversationSlide);
+        });
+
+        // Update button states
+        if (prevBtn) prevBtn.disabled = currentConversationSlide === 0;
+        if (nextBtn) nextBtn.disabled = currentConversationSlide === totalConversationSlides - 1;
+
+        // Update slide info
+        if (slideInfo) slideInfo.textContent = `${currentConversationSlide + 1} / ${totalConversationSlides}`;
+      }
+
+      window.changeConversationSlide = function(direction) {
+        currentConversationSlide += direction;
+        if (currentConversationSlide < 0) currentConversationSlide = 0;
+        if (currentConversationSlide >= totalConversationSlides) currentConversationSlide = totalConversationSlides - 1;
+        updateConversationCarousel();
+      };
+
+      window.goToConversationSlide = function(index) {
+        currentConversationSlide = index;
+        updateConversationCarousel();
+      };
+
+      // Keyboard navigation
+      document.addEventListener('keydown', function(e) {
+        const carousel = document.getElementById('conversationCarouselWrapper');
+        if (!carousel) return;
+        
+        const rect = carousel.getBoundingClientRect();
+        const isInView = rect.top < window.innerHeight && rect.bottom >= 0;
+        
+        if (isInView) {
+          if (e.key === 'ArrowLeft') changeConversationSlide(-1);
+          if (e.key === 'ArrowRight') changeConversationSlide(1);
+        }
+      });
+
+      // Initialize
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadConversationLogs);
+      } else {
+        loadConversationLogs();
       }
     })();
   </script>
