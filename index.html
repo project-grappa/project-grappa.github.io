@@ -207,14 +207,16 @@
     </div>
   </section>
 
-  <section class="section is-light">
+  <section class="section">
     <div class="container is-max-desktop">
       <!-- Paper video. -->
       <div class="columns is-centered has-text-centered">
         <div class="column is-four-fifths">
           <div class="publication-video">
-            <iframe src="./static/videos/GRAPPA_video_small.mp4" frameborder="0" allow="autoplay; encrypted-media"
-              allowfullscreen></iframe>
+            <video src="./static/videos/GRAPPA_video_small.mp4" controls autoplay muted loop playsinline
+              style="width: 100%; height: auto;" aria-label="GRAPPA overview video">
+              Your browser does not support the video tag.
+            </video>
           </div>
         </div>
       </div>
@@ -606,6 +608,14 @@
           </div>
         </div>
       </div>
+      
+    </div>
+  </section>
+
+
+
+  <section class="section hero is-light is-small">
+    <div class="container is-max-desktop">
       <div class="container" style="margin-bottom:3rem;">
         <h2 class="title is-3 has-text-centered">Evolution of the guidance code</h2>
         
@@ -636,7 +646,6 @@
 
     </div>
   </section>
-
   <section class="section" id="Appendix">
     <div class="container is-max-desktop content has-text-centered">
       <hr>
@@ -750,7 +759,7 @@
           <button class="expandable-button" style="background-color:#88bd75">Advisor Agent - Prompt</button>
           <div class="expandable-content" style="background-color:#d9ead3">
             <p>
-              You are a supervisor AI agent whose job is to guide a robot in the execution of a task. You will be
+              You are a advisor AI agent whose job is to guide a robot in the execution of a task. You will be
               provided
               with the name of a task that the robot is trying to learn (e.g. open door) and an image of the
               environment.
@@ -759,7 +768,7 @@
               <br>2- come up with the names of features or objects in the environment required to solve the task.
               <br>3- check if the objects are present in the scene and can be detected by the robot by providing the
               image to
-              the perception agent and asking the perception agent (e.g. ’Can you find the door handle?’ wait for
+              the grounding agent and asking the grounding agent (e.g. ’Can you find the door handle?’ wait for
               feedback),
               If the answer goes against of what you expected to repeat the steps 1 to 3.
               <br>4- Only proceed to this step after receiving positive feedback on 3. Write a Python code to guide the
@@ -807,8 +816,8 @@
             </code></pre>
             You are encouraged to break down the task into sub-tasks, and implement helper functions to better organize
             the code.
-            You can communicate with a perception agent and a robotic agent.
-            Always indicate who you are talking with by adding ’NEXT: perception agent’ or ’NEXT: robotic agent’ at
+            You can communicate with a grounding agent and a robotic agent.
+            Always indicate who you are talking with by adding ’NEXT: grounding agent’ or ’NEXT: robotic agent’ at
             the end of your message.
             </p>
           </div>
@@ -827,13 +836,13 @@
               that
               could encompass the object. In this case, report the function call used followed by ’NEXT: perception
               agent’ to look for the objects using similar object names or with a parent name that cloud encompasses
-              the object. (e.g. first answer: ’in the image(’door handle’) ->no NEXT: perception agent’, second answer:
-              ’in the image(’door handle’, ’door’) ->no NEXT: perception agent’, third answer: ’in the image(’handle’,
-              ’gate’) ->yes. couldn’t find a door handle but found a gate handle NEXT: supervisor agent’). Report back
-              to the supervisor agent in a clear and concise way if the objects were found or not. If an object was
+              the object. (e.g. first answer: ’in the image(’door handle’) ->no NEXT: grounding agent’, second answer:
+              ’in the image(’door handle’, ’door’) ->no NEXT: grounding agent’, third answer: ’in the image(’handle’,
+              ’gate’) ->yes. couldn’t find a door handle but found a gate handle NEXT: advisor agent’). Report back
+              to the advisor agent in a clear and concise way if the objects were found or not. If an object was
               found
-              using a parent name, report the parent name and the object name. Use ’NEXT: supervisor agent’ at the end
-              of your message to indicate that you are talking with the supervisor agent, or ’NEXT: perception agent’ to
+              using a parent name, report the parent name and the object name. Use ’NEXT: advisor agent’ at the end
+              of your message to indicate that you are talking with the advisor agent, or ’NEXT: grounding agent’ to
               look further for the objects.
             </p>
           </div>
@@ -847,7 +856,7 @@
               analyze
               the environment and criticize the code provided by checking if the guidance code is correct and makes
               sense.
-              <br>You SHOULD NOT create any code, only analyze the code provided by the supervisor. Attend to the
+              <br>You SHOULD NOT create any code, only analyze the code provided by the advisor. Attend to the
               following:
               <br>- The score provided by the guidance function is continuous and makes sense.
               <br>- The task is being solved correctly.
@@ -859,8 +868,8 @@
               by using the
               function test guidance code format(). If the code is not correct or can be further improved, provide
               feedback
-              to the supervisor agent and ask for a new code. Use ’NEXT: supervisor agent’ at the end of your message
-              to indicate that you are talking with the supervisor agent. If no code is provided, ask the supervisor
+              to the advisor agent and ask for a new code. Use ’NEXT: advisor agent’ at the end of your message
+              to indicate that you are talking with the advisor agent. If no code is provided, ask the advisor
               agent
               to generate the guidance code. If the code received makes sense and is correct, simply output the word
               ’TERMINATE’.
@@ -903,9 +912,14 @@
       </div>
     </div>
 
+      
+    </div>
+  </section>
+  <section class="section hero is-light is-small">
+    <div class="container is-max-desktop">
       <!-- Agent Conversation Logs Section -->
       <div class="container" style="margin-top:4rem; margin-bottom:3rem;">
-        <h2 class="title is-3 has-text-centered">Agent Conversation Logs Examples</h2>
+        <h2 class="title is-3 has-text-centered">Agent Conversation Logs - Examples</h2>
         <p class="has-text-centered" style="margin-bottom: 2rem;">
           Explore the conversation between agents as they collaborate to generate guidance code
         </p>
@@ -1388,14 +1402,13 @@
       const conversationFiles = [
         'static/logs/conversation_logs/conversation_log.json',
         // 'static/logs/conversation_logs/conversation_log_2.json'
-
       ];
 
       // Map role/agent names to display types
       function getAgentType(role, agent) {
         if (agent) {
-          if (agent.includes('supervisor')) return 'advisor';
-          if (agent.includes('perception')) return 'grounding';
+          if (agent.includes('advisor')) return 'advisor';
+          if (agent.includes('grounding')) return 'grounding';
           if (agent.includes('robotic')) return 'robotic';
           if (agent.includes('user')) return 'monitor';
           if (agent.includes('proxy')) return 'monitor';
@@ -1434,22 +1447,45 @@
             // Format content - detect and display base64 images
             let content = msg.content;
             
-            // Detect base64 image data
-            const base64ImageRegex = /<img\s+data:image\/([^;]+);base64,([^>]+)>/g;
-            const hasImages = base64ImageRegex.test(content);
-            
-            if (hasImages) {
-              // Replace base64 image placeholders with actual img tags
-              content = content.replace(
-                /<img\s+data:image\/([^;]+);base64,([^>]+)>/g,
-                '<img src="data:image/$1;base64,$2" style="max-width: 100%; max-height: 200px; height: auto; border-radius: 4px; margin: 10px 0; object-fit: contain;" />'
-              );
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+              const div = document.createElement('div');
+              div.textContent = text;
+              return div.innerHTML;
             }
             
-            // Preserve line breaks and code blocks
-            content = content
-              .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-              .replace(/\n/g, '<br>');
+            // Extract and preserve images before escaping
+            const images = [];
+            content = content.replace(/<img\s+data:image\/([^;]+);base64,([^>]+)>/g, (match, format, base64Data) => {
+              const placeholder = `__IMAGE_${images.length}__`;
+              images.push(`<img src="data:image/${format};base64,${base64Data}" style="max-width: 100%; max-height: 200px; height: auto; border-radius: 4px; margin: 10px 0; object-fit: contain;" />`);
+              return placeholder;
+            });
+            
+            // Extract and preserve code blocks before escaping
+            const codeBlocks = [];
+            content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+              const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+              codeBlocks.push(`<pre><code class="language-${lang || 'python'}">${escapeHtml(code)}</code></pre>`);
+              return placeholder;
+            });
+            
+            // Escape HTML in the remaining content
+            content = escapeHtml(content);
+            
+            // Restore images
+            images.forEach((image, index) => {
+              content = content.replace(`__IMAGE_${index}__`, image);
+            });
+            
+            // Restore code blocks (do this AFTER replacing newlines in text)
+            // Replace line breaks with <br> only in non-code content
+            content = content.replace(/\n/g, '<br>');
+            
+            // Now restore code blocks
+            codeBlocks.forEach((block, index) => {
+              content = content.replace(`__CODE_BLOCK_${index}__`, block);
+            });
             
             return `
               <div class="message ${agentType}">
@@ -1491,6 +1527,7 @@
                 </div>
               </div>
             </div>
+          </div>
           </div>
         `;
       }

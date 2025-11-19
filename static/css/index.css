@@ -248,7 +248,7 @@ p {
 }
 
 .guidance-code-header {
-  background: #f5f5f5;
+  background: #e9e9e9;
   padding: 15px 20px;
   border-bottom: 1px solid #dbdbdb;
 }
@@ -324,28 +324,39 @@ p {
 }
 
 .guidance-code-content::-webkit-scrollbar-track {
-  background: #f5f5f5;
+  background: #2a2a2a;
 }
 
 .guidance-code-content::-webkit-scrollbar-thumb {
-  background: #b5b5b5;
+  background: #4a4a4a;
   border-radius: 4px;
 }
 
 .guidance-code-content::-webkit-scrollbar-thumb:hover {
-  background: #999;
+  background: #5e5e5e;
 }
 
 .guidance-code-content pre {
   margin: 0 !important;
-  padding: 20px !important;
-  background: #2b2b2b !important;
+  padding: 16px 20px !important;
+  background: #2c2c2c !important;
+  border: 1px solid #000000;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  overflow-x: auto;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: #f5f5f5 !important;
 }
 
 .guidance-code-content pre code {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.6;
+  background: transparent !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
 /* Reset token styles within code blocks */
@@ -383,22 +394,48 @@ p {
   background: transparent !important;
 }
 
-.guidance-code-content pre,
-.guidance-code-content pre code {
-  all: revert;
+/* Align syntax highlighting colors with conversation items */
+.guidance-code-content pre code .token.number,
+.guidance-code-content code[class*="language-"] .token.number,
+.guidance-code-content pre[class*="language-"] .token.number {
+  color: #b5cea8 !important;
 }
 
-.guidance-code-content pre {
-  margin: 0 !important;
-  padding: 20px !important;
-  background: #2b2b2b !important;
+.guidance-code-content pre code .token.keyword,
+.guidance-code-content code[class*="language-"] .token.keyword,
+.guidance-code-content pre[class*="language-"] .token.keyword {
+  color: #c586c0 !important;
 }
 
-.guidance-code-content pre code {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
-  font-size: 13px !important;
-  line-height: 1.6 !important;
-  color: inherit !important;
+.guidance-code-content pre code .token.string,
+.guidance-code-content code[class*="language-"] .token.string,
+.guidance-code-content pre[class*="language-"] .token.string {
+  color: #ce9178 !important;
+}
+
+.guidance-code-content pre code .token.comment,
+.guidance-code-content code[class*="language-"] .token.comment,
+.guidance-code-content pre[class*="language-"] .token.comment {
+  color: #6a9955 !important;
+  font-style: italic;
+}
+
+.guidance-code-content pre code .token.function,
+.guidance-code-content code[class*="language-"] .token.function,
+.guidance-code-content pre[class*="language-"] .token.function {
+  color: #dcdcaa !important;
+}
+
+.guidance-code-content pre code .token.operator,
+.guidance-code-content code[class*="language-"] .token.operator,
+.guidance-code-content pre[class*="language-"] .token.operator {
+  color: #d4d4d4 !important;
+}
+
+.guidance-code-content pre code .token.boolean,
+.guidance-code-content code[class*="language-"] .token.boolean,
+.guidance-code-content pre[class*="language-"] .token.boolean {
+  color: #569cd6 !important;
 }
 
 /* Diff view styles */
@@ -425,7 +462,7 @@ p {
 }
 
 .guidance-diff-content::-webkit-scrollbar-track {
-  background: #f5f5f5;
+  background: #e6e6e6;
 }
 
 .guidance-diff-content::-webkit-scrollbar-thumb {
@@ -456,7 +493,7 @@ p {
 
 /* Key differences box */
 .guidance-key-differences {
-  background: #f5f5f5;
+  background: #e9e9e9;
   border-top: 1px solid #dbdbdb;
   padding: 15px 20px;
   font-size: 13px;
@@ -787,6 +824,41 @@ p {
   color: inherit;
   border: none;
   font-size: 13px;
+}
+
+/* Reset token styles within code blocks - similar to guidance code section */
+.message-content pre code .token.number,
+.message-content pre code .token.boolean,
+.message-content pre code .token.constant,
+.message-content code .token.number,
+.message-content code .token.boolean,
+.message-content code .token.constant {
+  display: inline !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  min-width: auto !important;
+  width: auto !important;
+  height: auto !important;
+  line-height: inherit !important;
+  text-align: left !important;
+  font-size: inherit !important;
+}
+
+/* Ensure all code tokens render properly */
+.message-content pre code *,
+.message-content code * {
+  display: inline !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  min-width: auto !important;
+  width: auto !important;
+  height: auto !important;
+  vertical-align: baseline !important;
+  text-align: left !important;
+  background: transparent !important;
 }
 
 /* Override Prism.js colors for better readability in conversation logs */

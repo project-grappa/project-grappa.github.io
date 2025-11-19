@@ -1,4 +1,4 @@
-from motor_cortex.common.perception_functions import get_position, get_size, get_orientation
+from grappa.common.perception_functions import get_position, get_size, get_orientation
 import numpy as np
 
 # Helper function to calculate distance
